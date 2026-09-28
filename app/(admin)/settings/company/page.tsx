@@ -1,0 +1,20 @@
+import { SettingsForm } from "@/components/settings-form";
+import { SettingsTabs } from "@/components/settings-tabs";
+import { getCompanySettings } from "@/lib/data";
+import { requireAdmin } from "@/lib/supabase/server";
+
+export default async function CompanySettingsPage() {
+  const { supabase, user } = await requireAdmin();
+  const settings = await getCompanySettings(supabase, user.storeId);
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h1 className="text-2xl font-black text-slate-950">Settings</h1>
+        <p className="text-sm text-slate-500">Update this store and quotation defaults.</p>
+      </div>
+      <SettingsTabs />
+      <SettingsForm settings={settings} returnTo="/settings/company" section="company" />
+    </div>
+  );
+}

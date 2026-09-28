@@ -1,0 +1,305 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { hashMemberPassword } from "@/lib/auth/password";
+import { getAdminEmail } from "@/lib/auth/session";
+import { logActivity } from "@/lib/data";
+import { isTenDigitPhone, PHONE_VALIDATION_MESSAGE } from "@/lib/phone";
+import { requireAdmin } from "@/lib/supabase/server";
+import {
+  imageExtension,
+  imageUploadError,
+  MAX_FORM_IMAGE_BYTES
+} from "@/lib/upload-limits";
+
+const memberSchema = z.object({
+  member_name: z.string().trim().min(2).max(100),
+  phone_number: z.string().trim().refine(isTenDigitPhone, PHONE_VALIDATION_MESSAGE),
+  email: z.string().trim().email().max(254),
+  password: z.string().min(8).max(128),
+  role: z.enum(["Admin", "Manager", "Sales Executive"]),
+  branch_location: z.string().trim().min(2).max(150),
+  max_discount_percent: z.coerce.number().min(0).max(100),
+  status: z.enum(["active", "inactive"])
+});
+
+const updateMemberSchema = memberSchema.extend({
+  id: z.string().uuid(),
+  password: z
+    .string()
+    .max(128)
+    .refine((value) => !value || value.length >= 8, {
+      message: "New password must contain at least 8 characters."
+    })
+});
+
+async function uploadMemberPhoto(supabase: any, file: File | null, storeCode: string) {
+  if (!file || file.size === 0) {
+    return { url: null, path: null };
+  }
+
+  const validationError = imageUploadError(file, MAX_FORM_IMAGE_BYTES);
+  if (validationError) throw new Error(validationError);
+
+  const extension = imageExtension(file);
+  if (!extension) throw new Error("Unsupported profile photo type.");
+
+  const path = `stores/${storeCode}/members/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from("member-photos").upload(path, file, {
+    contentType: file.type,
+    upsert: false
+  });
+
+  if (error) throw new Error(error.message);
+
+  const {
+    data: { publicUrl }
+  } = supabase.storage.from("member-photos").getPublicUrl(path);
+
+  return { url: publicUrl, path };
+}
+
+export async function addMemberAction(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const parsed = memberSchema.parse({
+    member_name: formData.get("member_name"),
+    phone_number: formData.get("phone_number"),
+    email: String(formData.get("email") || "").toLowerCase(),
+    password: formData.get("password"),
+    role: formData.get("role"),
+    branch_location: formData.get("branch_location"),
+    max_discount_percent: formData.get("max_discount_percent"),
+    status: formData.get("status")
+  });
+
+  if (parsed.email === getAdminEmail().trim().toLowerCase()) {
+    throw new Error("This email is reserved for the main administrator account.");
+  }
+
+  const photo = await uploadMemberPhoto(
+    supabase,
+    formData.get("profile_photo") as File | null,
+    user.storeCode
+  );
+  const { data, error } = await supabase
+    .from("team_members")
+    .insert({
+      store_id: user.storeId,
+      member_name: parsed.member_name,
+      phone_number: parsed.phone_number,
+      email: parsed.email,
+      password_hash: await hashMemberPassword(parsed.password),
+      role: parsed.role,
+      branch_location: parsed.branch_location,
+      max_discount_percent: parsed.max_discount_percent,
+      status: parsed.status,
+      profile_photo_url: photo.url,
+      profile_photo_path: photo.path
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (photo.path) {
+      await supabase.storage.from("member-photos").remove([photo.path]);
+    }
+
+    if (error.code === "23505") {
+      throw new Error("A team member with this email already exists.");
+    }
+
+    throw new Error(error.message);
+  }
+
+  await logActivity(supabase, {
+    userId: user.id,
+    storeId: user.storeId,
+    action: "Team member added",
+    entityType: "team_member",
+    entityId: data.id,
+    metadata: {
+      role: parsed.role,
+      maxDiscountPercent: parsed.max_discount_percent
+    }
+  });
+
+  revalidatePath("/members");
+  redirect("/members");
+}
+
+export async function updateMemberAction(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const parsed = updateMemberSchema.parse({
+    id: formData.get("id"),
+    member_name: formData.get("member_name"),
+    phone_number: formData.get("phone_number"),
+    email: String(formData.get("email") || "").toLowerCase(),
+    password: String(formData.get("password") || ""),
+    role: formData.get("role"),
+    branch_location: formData.get("branch_location"),
+    max_discount_percent: formData.get("max_discount_percent"),
+    status: formData.get("status")
+  });
+
+  if (parsed.email === getAdminEmail().trim().toLowerCase()) {
+    throw new Error("This email is reserved for the main administrator account.");
+  }
+
+  if (user.id === parsed.id && parsed.status === "inactive") {
+    throw new Error("You cannot deactivate your own account.");
+  }
+
+  if (user.id === parsed.id && parsed.role !== "Admin") {
+    throw new Error("You cannot remove your own administrator access.");
+  }
+
+  const { data: current, error: currentError } = await supabase
+    .from("team_members")
+    .select("profile_photo_url, profile_photo_path")
+    .eq("id", parsed.id)
+    .eq("store_id", user.storeId)
+    .single();
+  if (currentError) throw new Error(currentError.message);
+
+  const photo = await uploadMemberPhoto(
+    supabase,
+    formData.get("profile_photo") as File | null,
+    user.storeCode
+  );
+  const removePhoto = formData.get("remove_photo") === "on";
+  const profilePhotoUrl = photo.url
+    ? photo.url
+    : removePhoto
+      ? null
+      : current.profile_photo_url;
+  const profilePhotoPath = photo.path
+    ? photo.path
+    : removePhoto
+      ? null
+      : current.profile_photo_path;
+  const payload: Record<string, unknown> = {
+    member_name: parsed.member_name,
+    phone_number: parsed.phone_number,
+    email: parsed.email,
+    role: parsed.role,
+    branch_location: parsed.branch_location,
+    max_discount_percent: parsed.max_discount_percent,
+    status: parsed.status,
+    profile_photo_url: profilePhotoUrl,
+    profile_photo_path: profilePhotoPath
+  };
+
+  if (parsed.password) {
+    payload.password_hash = await hashMemberPassword(parsed.password);
+  }
+
+  const { error } = await supabase
+    .from("team_members")
+    .update(payload)
+    .eq("id", parsed.id)
+    .eq("store_id", user.storeId);
+
+  if (error) {
+    if (photo.path) {
+      await supabase.storage.from("member-photos").remove([photo.path]);
+    }
+
+    if (error.code === "23505") {
+      throw new Error("A team member with this email already exists.");
+    }
+
+    throw new Error(error.message);
+  }
+
+  if (
+    current.profile_photo_path &&
+    (photo.path || removePhoto) &&
+    current.profile_photo_path !== profilePhotoPath
+  ) {
+    await supabase.storage.from("member-photos").remove([current.profile_photo_path]);
+  }
+
+  await logActivity(supabase, {
+    userId: user.id,
+    storeId: user.storeId,
+    action: "Team member edited",
+    entityType: "team_member",
+    entityId: parsed.id,
+    metadata: {
+      role: parsed.role,
+      maxDiscountPercent: parsed.max_discount_percent
+    }
+  });
+
+  revalidatePath("/members");
+  revalidatePath(`/members/${parsed.id}/edit`);
+  revalidatePath("/", "layout");
+  redirect("/members");
+}
+
+export async function toggleMemberStatusAction(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = z.string().uuid().parse(formData.get("id"));
+  const status = z.enum(["active", "inactive"]).parse(formData.get("status"));
+
+  if (user.id === id && status === "inactive") {
+    throw new Error("You cannot deactivate your own account.");
+  }
+
+  const { error } = await supabase
+    .from("team_members")
+    .update({ status })
+    .eq("id", id)
+    .eq("store_id", user.storeId);
+  if (error) throw new Error(error.message);
+
+  await logActivity(supabase, {
+    userId: user.id,
+    storeId: user.storeId,
+    action: status === "active" ? "Team member activated" : "Team member deactivated",
+    entityType: "team_member",
+    entityId: id
+  });
+
+  revalidatePath("/members");
+}
+
+export async function deleteMemberAction(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = z.string().uuid().parse(formData.get("id"));
+
+  if (user.id === id) {
+    throw new Error("You cannot delete your own account.");
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("team_members")
+    .select("profile_photo_path")
+    .eq("id", id)
+    .eq("store_id", user.storeId)
+    .single();
+  if (memberError) throw new Error(memberError.message);
+
+  const { error } = await supabase
+    .from("team_members")
+    .delete()
+    .eq("id", id)
+    .eq("store_id", user.storeId);
+  if (error) throw new Error(error.message);
+
+  if (member.profile_photo_path) {
+    await supabase.storage.from("member-photos").remove([member.profile_photo_path]);
+  }
+
+  await logActivity(supabase, {
+    userId: user.id,
+    storeId: user.storeId,
+    action: "Team member deleted",
+    entityType: "team_member",
+    entityId: id
+  });
+
+  revalidatePath("/members");
+}

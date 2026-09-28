@@ -1,0 +1,97 @@
+.screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.page {
+  min-height: 100vh;
+}
+
+.panel {
+  min-height: calc(100vh - 9rem);
+}
+
+.logoOrbitLoader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 135px;
+  height: 135px;
+}
+
+.ringTrack {
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(81, 43, 70, 0.14);
+  border-radius: 50%;
+}
+
+.ringArc {
+  position: absolute;
+  inset: 0;
+  border: 4px solid transparent;
+  border-top-color: #512b46;
+  border-right-color: #c08a3e;
+  border-bottom-color: #6f8a96;
+  border-radius: 50%;
+  filter:
+    drop-shadow(0 0 10px rgba(81, 43, 70, 0.45))
+    drop-shadow(0 0 8px rgba(192, 138, 62, 0.3));
+  animation: spin 1.2s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+}
+
+.innerGlow {
+  position: absolute;
+  inset: 15px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 0 24px rgba(81, 43, 70, 0.12),
+    0 8px 22px rgba(36, 29, 34, 0.1);
+}
+
+.loaderLogo {
+  position: relative;
+  z-index: 3;
+  width: 62px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 14px rgba(81, 43, 70, 0.24));
+  animation: logoPulse 1.2s ease-in-out infinite;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes logoPulse {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.86;
+  }
+
+  50% {
+    transform: scale(1.07);
+    opacity: 1;
+  }
+}
