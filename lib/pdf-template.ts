@@ -383,14 +383,14 @@ function detailFlow({
 }) {
   const phoneIconBig = iconMarkup(chromeImages.phoneIconBig, "phone");
   const phoneIcon = iconMarkup(chromeImages.phoneIcon, "phone");
-  const webIcon = iconMarkup(chromeImages.webIcon, "web");
+  const mailIcon = iconMarkup(chromeImages.mailIcon, "mail");
   const signerName =
     settings.authorized_person_name === "Authorized Signatory"
       ? settings.owner_name || settings.company_name
       : settings.authorized_person_name || settings.owner_name || settings.company_name;
   const signerDesignation = /^for\s+/i.test(settings.authorized_person_designation)
-    ? `For ${settings.company_name}`
-    : settings.authorized_person_designation || `For ${settings.company_name}`;
+    ? "National Head"
+    : settings.authorized_person_designation || "National Head";
 
   return `
     <template id="pdf-flow-blocks">
@@ -404,7 +404,7 @@ function detailFlow({
           <strong>For ${escapeHtml(settings.company_name)}</strong>
         </div>
         <div class="signature-row line-bottom">
-          <div><strong>${escapeHtml(settings.bank_branch || settings.store_name)}</strong></div>
+          <div><strong>${escapeHtml(settings.company_branch || "VELLORE")}</strong></div>
           <div><strong>${escapeHtml(signerName)}</strong>${signerDesignation ? `<br>${escapeHtml(signerDesignation)}` : ""}</div>
         </div>
       </div>
@@ -420,7 +420,7 @@ function detailFlow({
           <h3>Corporate Office :</h3>
           <strong>${escapeHtml(settings.company_name)}</strong><br>
           ${escapeHtml(settings.address)}<br><br>
-          <span class="icon-text">${webIcon} ${escapeHtml(settings.email)}</span>
+          <span class="icon-text">${mailIcon} ${escapeHtml(settings.email)}</span>
           <span class="sep">|</span>
           <span class="icon-text">${phoneIcon} ${escapeHtml(settings.phone_numbers.split("|")[0]?.trim() || settings.phone_numbers)}</span>
         </div>

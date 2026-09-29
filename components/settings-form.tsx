@@ -87,6 +87,14 @@ export function SettingsForm({
             <textarea className="field-input min-h-24" name="address" defaultValue={settings.address} />
           </label>
           <label>
+            <span className="field-label">Company Branch</span>
+            <input
+              className="field-input"
+              name="company_branch"
+              defaultValue={settings.company_branch || "VELLORE"}
+            />
+          </label>
+          <label>
             <span className="field-label">Bank Firm Name</span>
             <input
               className="field-input"
@@ -107,7 +115,7 @@ export function SettingsForm({
             />
           </label>
           <label>
-            <span className="field-label">Branch</span>
+            <span className="field-label">Bank Branch</span>
             <input className="field-input" name="bank_branch" defaultValue={settings.bank_branch} />
           </label>
           <label>
@@ -330,6 +338,7 @@ function HiddenCompanyFields({ settings }: { settings: CompanySettings }) {
       <input type="hidden" name="phone_numbers" value={settings.phone_numbers} />
       <input type="hidden" name="email" value={settings.email} />
       <input type="hidden" name="address" value={settings.address} />
+      <input type="hidden" name="company_branch" value={settings.company_branch || "VELLORE"} />
       <input type="hidden" name="bank_firm_name" value={settings.bank_firm_name} />
       <input type="hidden" name="bank_name" value={settings.bank_name} />
       <input type="hidden" name="bank_account_no" value={settings.bank_account_no} />

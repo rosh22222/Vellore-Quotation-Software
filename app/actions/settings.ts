@@ -108,6 +108,7 @@ export async function saveCompanySettingsAction(formData: FormData) {
       .parse(formData.get("phone_numbers")),
     email: String(formData.get("email") || "").trim(),
     address: String(formData.get("address") || "").trim(),
+    company_branch: String(formData.get("company_branch") || "VELLORE").trim(),
     bank_firm_name: String(formData.get("bank_firm_name") || "").trim(),
     bank_name: String(formData.get("bank_name") || "").trim(),
     bank_account_no: String(formData.get("bank_account_no") || "").trim(),

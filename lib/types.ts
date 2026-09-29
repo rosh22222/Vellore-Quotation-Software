@@ -14,6 +14,7 @@ export type Store = {
   phone_numbers: string;
   email: string;
   gst_number: string;
+  company_branch: string;
   bank_firm_name: string;
   bank_name: string;
   bank_branch: string;

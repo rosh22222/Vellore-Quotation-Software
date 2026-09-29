@@ -132,8 +132,8 @@ function signerDetails(settings: CompanySettings) {
       ? settings.owner_name || settings.company_name
       : settings.authorized_person_name || settings.owner_name || settings.company_name;
   const designation = /^for\s+/i.test(settings.authorized_person_designation)
-    ? `For ${settings.company_name}`
-    : settings.authorized_person_designation || `For ${settings.company_name}`;
+    ? "National Head"
+    : settings.authorized_person_designation || "National Head";
 
   return { name, designation };
 }
@@ -716,7 +716,7 @@ export async function createQuotationExcel(
     row,
     1,
     3,
-    settings.bank_branch || settings.store_name,
+    settings.company_branch || "VELLORE",
     {
       alignment: { vertical: "middle" },
       border: bottomBlackBorder,

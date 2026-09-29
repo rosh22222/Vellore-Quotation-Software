@@ -373,8 +373,8 @@ function DetailsFlow({
       ? settings.owner_name || settings.company_name
       : settings.authorized_person_name || settings.owner_name || settings.company_name;
   const signerDesignation = /^for\s+/i.test(settings.authorized_person_designation)
-    ? `For ${settings.company_name}`
-    : settings.authorized_person_designation || `For ${settings.company_name}`;
+    ? "National Head"
+    : settings.authorized_person_designation || "National Head";
   const primaryPhone = settings.phone_numbers.split("|")[0]?.trim() || settings.phone_numbers;
 
   return (
@@ -400,7 +400,7 @@ function DetailsFlow({
       <View wrap={false}>
         <View style={styles.companyLine}><Text style={styles.bold}>For {settings.company_name}</Text></View>
         <View style={styles.signatureRow}>
-          <View style={styles.signatureLeft}><Text style={styles.bold}>{settings.bank_branch || settings.store_name}</Text></View>
+          <View style={styles.signatureLeft}><Text style={styles.bold}>{settings.company_branch || "VELLORE"}</Text></View>
           <View style={styles.signatureRight}>
             <Text style={styles.bold}>{signerName}</Text>
             <Text>{signerDesignation}</Text>
@@ -419,7 +419,7 @@ function DetailsFlow({
           <Text style={styles.officeHeading}>Corporate Office :</Text>
           <Text style={styles.bold}>{settings.company_name}</Text>
           <Text>{settings.address}</Text>
-          <IconLine icon={images.webIcon}>{settings.email}</IconLine>
+          <IconLine icon={images.mailIcon}>{settings.email}</IconLine>
           <IconLine icon={images.phoneIcon}>{primaryPhone}</IconLine>
         </View>
       </View>

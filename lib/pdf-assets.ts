@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { CompanySettings } from "@/lib/types";
 
-type PdfImageName = "top" | "phoneIconBig" | "phoneIcon" | "webIcon";
+type PdfImageName = "top" | "phoneIconBig" | "phoneIcon" | "mailIcon";
 
 type PdfImageCandidate = {
   file: string;
@@ -13,7 +13,7 @@ export type PdfChromeImages = {
   top?: string;
   phoneIconBig?: string;
   phoneIcon?: string;
-  webIcon?: string;
+  mailIcon?: string;
 };
 
 const imageCandidates: Record<PdfImageName, PdfImageCandidate[]> = {
@@ -36,11 +36,11 @@ const imageCandidates: Record<PdfImageName, PdfImageCandidate[]> = {
     { file: "phone-icon.jpeg", mime: "image/jpeg" },
     { file: "phone-icon.webp", mime: "image/webp" }
   ],
-  webIcon: [
-    { file: "web-icon.png", mime: "image/png" },
-    { file: "web-icon.jpg", mime: "image/jpeg" },
-    { file: "web-icon.jpeg", mime: "image/jpeg" },
-    { file: "web-icon.webp", mime: "image/webp" }
+  mailIcon: [
+    { file: "mail-icon.png", mime: "image/png" },
+    { file: "mail-icon.jpg", mime: "image/jpeg" },
+    { file: "mail-icon.jpeg", mime: "image/jpeg" },
+    { file: "mail-icon.webp", mime: "image/webp" }
   ]
 };
 
@@ -139,7 +139,7 @@ async function readPdfImage(name: PdfImageName) {
 export async function getPdfChromeImages(
   settings?: Pick<CompanySettings, "pdf_header_image_url">
 ): Promise<PdfChromeImages> {
-  const [top, phoneIconBig, phoneIcon, webIcon] = await Promise.all([
+  const [top, phoneIconBig, phoneIcon, mailIcon] = await Promise.all([
     readConfiguredPdfImage(settings?.pdf_header_image_url).then(
       (image) =>
         (image ? `data:${image.mime};base64,${image.buffer.toString("base64")}` : undefined) ||
@@ -147,8 +147,8 @@ export async function getPdfChromeImages(
     ),
     readPdfImage("phoneIconBig"),
     readPdfImage("phoneIcon"),
-    readPdfImage("webIcon")
+    readPdfImage("mailIcon")
   ]);
 
-  return { top, phoneIconBig, phoneIcon, webIcon };
+  return { top, phoneIconBig, phoneIcon, mailIcon };
 }

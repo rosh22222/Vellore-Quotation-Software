@@ -16,6 +16,7 @@ export const DEFAULT_COMPANY_SETTINGS: Omit<
   phone_numbers: "7200570570 | 7200571571",
   email: "wcvellore@gmail.com",
   address: "S F NO 45/22B2, KATPADI TO VELLORE MAIN ROAD, VIRUTHAMPET, TAMIL NADU, 632006.",
+  company_branch: "VELLORE",
   bank_firm_name: "VELLORE FITNESS EQUIPMENT",
   bank_name: "HDFC BANK",
   bank_account_no: "50200015573250",
@@ -36,7 +37,7 @@ export const DEFAULT_COMPANY_SETTINGS: Omit<
   default_after_sales_support:
     "Dedicated service support within 24 hours of complaint registration.",
   authorized_person_name: "DHASARATHAN SATHYAN",
-  authorized_person_designation: "For VELLORE FITNESS EQUIPMENTS",
+  authorized_person_designation: "National Head",
   signature_url: null,
   brand_footer_heading: "ASSOCIATED FITNESS BRANDS",
   brand_footer_enabled: true,
