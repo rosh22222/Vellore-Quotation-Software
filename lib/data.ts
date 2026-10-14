@@ -103,12 +103,12 @@ export async function getFooterLogos(
   return (data || []) as BrandFooterLogo[];
 }
 
-export async function getActiveQuotationProducts(supabase: any): Promise<Product[]> {
+export async function getActiveQuotationProducts(catalogSupabase: any): Promise<Product[]> {
   const products: Product[] = [];
   let from = 0;
 
   while (true) {
-    const { data, error } = await supabase
+    const { data, error } = await catalogSupabase
       .from("products")
       .select("*, brand:brands!products_brand_id_fkey(id,name)")
       .eq("status", "active")

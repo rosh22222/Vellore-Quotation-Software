@@ -8,6 +8,7 @@ import { slugify } from "@/lib/format";
 import { logActivity } from "@/lib/data";
 import { isSafeProductImageUrl } from "@/lib/product-image-url";
 import { requireUser } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 import {
   imageExtension,
   imageUploadError,
@@ -99,6 +100,7 @@ export async function saveProductAction(
   formData: FormData
 ): Promise<ActionState> {
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const imageFile = formData.get("image") as File | null;
   const parsedResult = productSchema.safeParse({
     id: String(formData.get("id") || ""),
@@ -138,7 +140,7 @@ export async function saveProductAction(
   }
 
   const parsed = parsedResult.data;
-  let duplicateQuery = supabase
+  let duplicateQuery = catalogSupabase
     .from("products")
     .select("id, deleted_at")
     .eq("sku", parsed.sku);
@@ -164,7 +166,7 @@ export async function saveProductAction(
 
   let imageUrl: string | null;
   try {
-    imageUrl = await uploadImage(supabase, imageFile, parsed.image_url || null);
+    imageUrl = await uploadImage(catalogSupabase, imageFile, parsed.image_url || null);
   } catch (error) {
     console.error("Unable to upload product image", error);
     const message = error instanceof Error ? error.message : "";
@@ -196,7 +198,7 @@ export async function saveProductAction(
   };
 
   if (parsed.id) {
-    const { error } = await supabase.from("products").update(payload).eq("id", parsed.id);
+    const { error } = await catalogSupabase.from("products").update(payload).eq("id", parsed.id);
     if (error) {
       console.error("Unable to update product", error);
       return {
@@ -218,7 +220,7 @@ export async function saveProductAction(
       entityId: parsed.id
     });
   } else if (deletedProductId) {
-    const { error } = await supabase
+    const { error } = await catalogSupabase
       .from("products")
       .update({ ...payload, deleted_at: null })
       .eq("id", deletedProductId)
@@ -248,7 +250,11 @@ export async function saveProductAction(
       entityId: deletedProductId
     });
   } else {
-    const { data, error } = await supabase.from("products").insert(payload).select("id").single();
+    const { data, error } = await catalogSupabase
+      .from("products")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) {
       console.error("Unable to add product", error);
       return {
@@ -277,9 +283,10 @@ export async function saveProductAction(
 
 export async function softDeleteProductAction(formData: FormData) {
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const id = productIdSchema.parse(formData.get("id"));
 
-  const { error } = await supabase
+  const { error } = await catalogSupabase
     .from("products")
     .update({ deleted_at: new Date().toISOString(), status: "inactive" })
     .eq("id", id)
@@ -300,10 +307,11 @@ export async function softDeleteProductAction(formData: FormData) {
 
 export async function bulkSoftDeleteProductsAction(formData: FormData) {
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const rawIds = JSON.parse(String(formData.get("ids") || "[]"));
   const ids = [...new Set(bulkProductIdsSchema.parse(rawIds))];
 
-  const { data, error } = await supabase
+  const { data, error } = await catalogSupabase
     .from("products")
     .update({ deleted_at: new Date().toISOString(), status: "inactive" })
     .in("id", ids)
@@ -347,6 +355,7 @@ async function ensureBrand(supabase: any, name: string) {
 
 export async function bulkImportProducts(rows: unknown[]) {
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const parsedRows = z.array(importRowSchema).safeParse(rows);
 
   if (!parsedRows.success) {
@@ -363,7 +372,7 @@ export async function bulkImportProducts(rows: unknown[]) {
     return { ok: false, message: `Duplicate SKU in file: ${duplicateInFile}` };
   }
 
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await catalogSupabase
     .from("products")
     .select("id, sku, deleted_at")
     .in("sku", skus);
@@ -390,7 +399,7 @@ export async function bulkImportProducts(rows: unknown[]) {
   const productPayload = [];
 
   for (const row of parsedRows.data) {
-    const brandId = await ensureBrand(supabase, row.brand);
+    const brandId = await ensureBrand(catalogSupabase, row.brand);
     productPayload.push({
       sku: row.sku.trim(),
       product_name: row.product_name.trim(),
@@ -416,7 +425,7 @@ export async function bulkImportProducts(rows: unknown[]) {
   const restoredCount = productPayload.filter((product) =>
     deletedProductSkus.has(product.sku)
   ).length;
-  const { error } = await supabase
+  const { error } = await catalogSupabase
     .from("products")
     .upsert(productPayload, { onConflict: "sku" });
   if (error) throw new Error(error.message);

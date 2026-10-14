@@ -12,7 +12,8 @@ function toMoney(value: number) {
 
 export function calculateQuotation(
   items: QuotationItemInput[],
-  gstMode: GstMode
+  gstMode: GstMode,
+  roundGrandTotal = true
 ): { items: CalculatedQuotationItem[]; totals: QuotationTotals } {
   const calculatedItems = items.map((item) => {
     const qty = Number(item.qty || 0);
@@ -52,7 +53,7 @@ export function calculateQuotation(
   );
   const netTotal =
     gstMode === "add" ? toMoney(totalSpecialPrice + gstAmount) : totalSpecialPrice;
-  const grandTotal = Math.round(netTotal);
+  const grandTotal = roundGrandTotal ? Math.round(netTotal) : netTotal;
 
   return {
     items: calculatedItems,

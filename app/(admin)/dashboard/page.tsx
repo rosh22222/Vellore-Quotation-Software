@@ -4,11 +4,13 @@ import { Plus, Upload, FileText, Settings } from "lucide-react";
 import { StatCard, SectionTitle, StatusBadge } from "@/components/ui";
 import { requireUser } from "@/lib/supabase/server";
 import { formatCurrency, formatCustomerName, formatDate } from "@/lib/format";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser().catch(() =>
     redirect("/api/auth/logout?reason=session_expired")
   );
+  const catalogSupabase = createCatalogSupabaseClient();
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -20,7 +22,10 @@ export default async function DashboardPage() {
     valueResult,
     recentResult
   ] = await Promise.all([
-    supabase.from("products").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    catalogSupabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null),
     supabase
       .from("quotations")
       .select("id", { count: "exact", head: true })

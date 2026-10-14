@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/product-form";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 import type { Brand, Product } from "@/lib/types";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createCatalogSupabaseClient();
   const [productResult, brandsResult] = await Promise.all([
     supabase.from("products").select("*").eq("id", id).single(),
     supabase.from("brands").select("*").order("name")

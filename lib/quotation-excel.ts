@@ -484,15 +484,20 @@ function addProductRows(
   return row;
 }
 
-function addTotals(worksheet: Worksheet, quotation: Quotation, startRow: number) {
+function addTotals(
+  worksheet: Worksheet,
+  quotation: Quotation,
+  startRow: number,
+  hideRoundOff = false
+) {
   const totals: Array<[string, number]> = [
     ["Total List Price", amount(quotation.total_list_price)],
     ["Discount", amount(quotation.discount_amount)],
     ["Total Special Price", amount(quotation.total_special_price)],
     ["GST", amount(quotation.gst_amount)],
     ["Net Total", amount(quotation.net_total)],
-    ["Round Off", amount(quotation.round_off)],
-    ["Grand Total", amount(quotation.grand_total)]
+    ...(hideRoundOff ? [] : [["Round Off", amount(quotation.round_off)] as [string, number]]),
+    ["Grand Total", amount(hideRoundOff ? quotation.net_total : quotation.grand_total)]
   ];
 
   let row = startRow;
@@ -659,7 +664,12 @@ export async function createQuotationExcel(
 
   worksheet.getRow(row).height = 8;
   row += 1;
-  row = addTotals(worksheet, quotation, row);
+  row = addTotals(
+    worksheet,
+    quotation,
+    row,
+    settings.store_code.trim().toUpperCase() === "FMV"
+  );
   worksheet.getRow(row).height = 8;
   row += 1;
 

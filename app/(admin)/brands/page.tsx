@@ -5,7 +5,7 @@ import { RequiredMark } from "@/components/required-mark";
 import { SubmitButton } from "@/components/submit-button";
 import { TimedNotice } from "@/components/timed-notice";
 import { StatusBadge } from "@/components/ui";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -15,7 +15,7 @@ export default async function BrandsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createCatalogSupabaseClient();
   const { data: brands, error } = await supabase.from("brands").select("*").order("name");
   if (error) throw new Error(error.message);
 

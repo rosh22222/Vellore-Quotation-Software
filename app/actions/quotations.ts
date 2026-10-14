@@ -138,7 +138,11 @@ export async function saveQuotationAction(formData: FormData) {
     }
   }
 
-  const calculated = calculateQuotation(items, gstMode as GstMode);
+  const calculated = calculateQuotation(
+    items,
+    gstMode as GstMode,
+    settings.store_code.trim().toUpperCase() !== "FMV"
+  );
   const { customerId, customerPayload } = customerInputFromForm(formData);
   const basePayload = quotationPayloadFromForm(
     formData,

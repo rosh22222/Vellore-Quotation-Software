@@ -1,5 +1,6 @@
 import { getSearchText } from "@/lib/search";
 import { requireUser } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +17,13 @@ function csvCell(value: unknown) {
 }
 
 export async function GET(request: Request) {
-  let supabase;
-
   try {
-    ({ supabase } = await requireUser());
+    await requireUser();
   } catch {
     return new Response("Authentication required", { status: 401 });
   }
+
+  const supabase = createCatalogSupabaseClient();
 
   const url = new URL(request.url);
   const q = getSearchText(url.searchParams.get("q") || undefined);

@@ -7,12 +7,14 @@ import { databaseErrorMessage, type ActionState } from "@/lib/action-state";
 import { logActivity } from "@/lib/data";
 import { slugify } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 
 export async function saveBrandAction(
   _previousState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const id = String(formData.get("id") || "");
   const parsed = z
     .object({
@@ -29,7 +31,7 @@ export async function saveBrandAction(
   const isActive = formData.get("is_active") === "on";
   const payload = { name, slug: slugify(name), is_active: isActive };
 
-  let duplicateQuery = supabase.from("brands").select("id").eq("slug", payload.slug);
+  let duplicateQuery = catalogSupabase.from("brands").select("id").eq("slug", payload.slug);
   if (id) duplicateQuery = duplicateQuery.neq("id", id);
   const { data: duplicate, error: duplicateError } = await duplicateQuery.maybeSingle();
 
@@ -43,7 +45,7 @@ export async function saveBrandAction(
   }
 
   if (id) {
-    const { error } = await supabase.from("brands").update(payload).eq("id", id);
+    const { error } = await catalogSupabase.from("brands").update(payload).eq("id", id);
     if (error) {
       console.error("Unable to update brand", error);
       return {
@@ -63,7 +65,11 @@ export async function saveBrandAction(
       entityId: id
     });
   } else {
-    const { data, error } = await supabase.from("brands").insert(payload).select("id").single();
+    const { data, error } = await catalogSupabase
+      .from("brands")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) {
       console.error("Unable to add brand", error);
       return {
@@ -92,18 +98,23 @@ export async function saveBrandAction(
 }
 
 export async function toggleBrandAction(formData: FormData) {
-  const { supabase } = await requireUser();
+  await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const id = z.string().uuid().parse(formData.get("id"));
   const isActive = formData.get("is_active") === "true";
-  const { error } = await supabase.from("brands").update({ is_active: isActive }).eq("id", id);
+  const { error } = await catalogSupabase
+    .from("brands")
+    .update({ is_active: isActive })
+    .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/brands");
 }
 
 export async function deleteBrandAction(formData: FormData) {
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const id = z.string().uuid().parse(formData.get("id"));
-  const { error } = await supabase.from("brands").delete().eq("id", id);
+  const { error } = await catalogSupabase.from("brands").delete().eq("id", id);
 
   if (error) throw new Error(error.message);
 

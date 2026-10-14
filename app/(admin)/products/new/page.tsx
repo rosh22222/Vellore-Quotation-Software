@@ -1,9 +1,9 @@
 import { ProductForm } from "@/components/product-form";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 import type { Brand } from "@/lib/types";
 
 export default async function NewProductPage() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createCatalogSupabaseClient();
   const { data: brands, error } = await supabase
     .from("brands")
     .select("*")

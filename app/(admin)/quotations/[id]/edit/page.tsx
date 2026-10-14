@@ -2,15 +2,17 @@ import { notFound } from "next/navigation";
 import { QuotationBuilder } from "@/components/quotation-builder";
 import { getActiveQuotationProducts, getCompanySettings, getQuotationWithItems } from "@/lib/data";
 import { requireUser } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 import type { Customer, Product } from "@/lib/types";
 
 export default async function EditQuotationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user } = await requireUser();
+  const catalogSupabase = createCatalogSupabaseClient();
   const [settings, quotationResult, productsResult, customersResult] = await Promise.all([
     getCompanySettings(supabase, user.storeId),
     getQuotationWithItems(supabase, id, user.storeId).catch(() => null),
-    getActiveQuotationProducts(supabase),
+    getActiveQuotationProducts(catalogSupabase),
     supabase.from("customers").select("*").eq("store_id", user.storeId).order("customer_name")
   ]);
 

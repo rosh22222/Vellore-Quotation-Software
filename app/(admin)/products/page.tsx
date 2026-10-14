@@ -6,7 +6,7 @@ import { ProductsList } from "@/components/products-list";
 import { ProductsExportButton } from "@/components/products-export";
 import { SearchField } from "@/components/search-field";
 import { EmptyState } from "@/components/ui";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createCatalogSupabaseClient } from "@/lib/supabase/catalog";
 import { getSearchText } from "@/lib/search";
 import { buildPageHref, getPageNumber, LIST_PAGE_SIZE } from "@/lib/pagination";
 import type { Product } from "@/lib/types";
@@ -19,7 +19,7 @@ export default async function ProductsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createCatalogSupabaseClient();
   const q = getSearchText(params.q);
   const brand = getSearchText(params.brand);
   const page = getPageNumber(params.page);
