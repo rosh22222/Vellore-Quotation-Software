@@ -9,6 +9,17 @@ import { requireUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+function getWelcomeName(storeCode?: string) {
+  switch (storeCode?.trim().toUpperCase()) {
+    case "VFE":
+      return "Vellore Fitness";
+    case "FMV":
+      return "Fitness Mart";
+    default:
+      return "Administrator";
+  }
+}
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabaseIssue = getSupabaseConfigIssue();
   const cookieStore = await cookies();
@@ -55,7 +66,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         />
         <div className="min-w-0 flex-1">
           <Topbar
-            title={`Welcome ${currentUser?.name || "Administrator"}`}
+            title={`Welcome ${getWelcomeName(currentUser?.storeCode)}`}
             user={{
               name: currentUser?.name || "Administrator",
               storeCode: currentUser?.storeCode,

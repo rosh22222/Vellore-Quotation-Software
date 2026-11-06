@@ -108,6 +108,21 @@ function productBrand(item: QuotationItem, settings: CompanySettings) {
   return brand || settings.quotation_prefix || "VF";
 }
 
+function productIdAndName(item: QuotationItem) {
+  const productId = text(item.sku);
+  const productName = text(item.product_name);
+
+  if (!productId) return productName;
+  if (
+    !productName ||
+    productId.toLocaleLowerCase("en-IN") === productName.toLocaleLowerCase("en-IN")
+  ) {
+    return productId;
+  }
+
+  return `${productId} - ${productName}`;
+}
+
 function productDescription(item: QuotationItem) {
   return [
     text(item.description),
@@ -121,9 +136,12 @@ function productDescription(item: QuotationItem) {
 }
 
 function gstText(quotation: Quotation) {
-  if (quotation.gst_mode === "included") return "* GST Included.";
+  const taxLabel = quotation.gst_type === "igst" ? "IGST" : "CGST + SGST";
+  if (quotation.gst_mode === "included") {
+    return `* ${taxLabel} Included. Place of Supply: ${quotation.place_of_supply}.`;
+  }
   if (quotation.gst_mode === "none") return "* No GST.";
-  return "* GST Extra.";
+  return `* ${taxLabel} Extra. Place of Supply: ${quotation.place_of_supply}.`;
 }
 
 function signerDetails(settings: CompanySettings) {
@@ -431,7 +449,7 @@ function addProductRows(
       richText: [
         {
           font: { name: "Georgia", size: 10, bold: true, color: { argb: BLACK } },
-          text: item.product_name
+          text: productIdAndName(item)
         },
         ...(description
           ? [
@@ -490,11 +508,21 @@ function addTotals(
   startRow: number,
   hideRoundOff = false
 ) {
+  const includedLabel = quotation.gst_mode === "included" ? " (Included)" : "";
+  const taxRows: Array<[string, number]> =
+    quotation.gst_type === "cgst_sgst"
+      ? [
+          [`CGST${includedLabel}`, amount(quotation.cgst_amount)],
+          [`SGST${includedLabel}`, amount(quotation.sgst_amount)]
+        ]
+      : quotation.gst_type === "igst"
+        ? [[`IGST${includedLabel}`, amount(quotation.igst_amount)]]
+        : [];
   const totals: Array<[string, number]> = [
     ["Total List Price", amount(quotation.total_list_price)],
     ["Discount", amount(quotation.discount_amount)],
     ["Total Special Price", amount(quotation.total_special_price)],
-    ["GST", amount(quotation.gst_amount)],
+    ...taxRows,
     ["Net Total", amount(quotation.net_total)],
     ...(hideRoundOff ? [] : [["Round Off", amount(quotation.round_off)] as [string, number]]),
     ["Grand Total", amount(hideRoundOff ? quotation.net_total : quotation.grand_total)]

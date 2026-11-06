@@ -317,7 +317,7 @@ function Totals({ quotation }: { quotation: Quotation }) {
     ["Net Total", quotation.net_total],
     ["Round Off", quotation.round_off],
     ["Grand Total", quotation.grand_total]
-  ] as const;
+  ] as Array<[string, number]>;
 
   return (
     <View style={styles.totals} wrap={false}>

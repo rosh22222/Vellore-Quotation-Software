@@ -117,7 +117,20 @@ function productImage(item: QuotationItem, settings: CompanySettings) {
   return `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.product_name)}" />`;
 }
 
+function productIdAndName(item: QuotationItem) {
+  const productId = String(item.sku || "").trim();
+  const productName = String(item.product_name || "").trim();
+
+  if (!productId) return productName;
+  if (!productName || productId.toLocaleLowerCase("en-IN") === productName.toLocaleLowerCase("en-IN")) {
+    return productId;
+  }
+
+  return `${productId} - ${productName}`;
+}
+
 function productDescription(item: QuotationItem) {
+  const heading = productIdAndName(item);
   const detail = [
     lines(item.description),
     labelLine("Dimensions", item.dimensions),
@@ -128,7 +141,7 @@ function productDescription(item: QuotationItem) {
     .filter(Boolean)
     .join("");
 
-  return `<strong>${escapeHtml(item.product_name)}</strong>${detail ? `<br><br>${detail}` : ""}`;
+  return `<strong>${escapeHtml(heading)}</strong>${detail ? `<br><br>${detail}` : ""}`;
 }
 
 function fitnessMartProductDescription(item: QuotationItem) {
@@ -227,7 +240,7 @@ function fitnessMartProductRows(
       <tr class="fmv-product-row">
         <td class="fmv-serial-cell">${startIndex + index + 1}</td>
         <td class="fmv-name-cell">
-          <strong>${escapeHtml(item.product_name)}</strong>
+          <strong>${escapeHtml(productIdAndName(item))}</strong>
         </td>
         <td class="fmv-money-cell">${amount(item.unit_price)}</td>
         <td class="fmv-money-cell"><strong>${amount(item.special_price)}</strong></td>
@@ -239,7 +252,7 @@ function fitnessMartProductRows(
       <tr class="fmv-product-row">
         <td class="fmv-serial-cell">${startIndex + index + 1}</td>
         <td class="fmv-name-cell">
-          <strong>${escapeHtml(item.product_name)}</strong>
+          <strong>${escapeHtml(productIdAndName(item))}</strong>
         </td>
         <td class="fmv-description-cell">${fitnessMartProductDescription(item)}</td>
         <td class="fmv-product-cell">
@@ -362,7 +375,7 @@ function productRows(
         ? `
       <tr class="p-row">
         <td class="center top">${startIndex + index + 1}</td>
-        <td class="desc proforma-product-desc"><strong>${escapeHtml(item.product_name)}</strong></td>
+        <td class="desc proforma-product-desc"><strong>${escapeHtml(productIdAndName(item))}</strong></td>
         <td class="center top">${amount(item.unit_price)}</td>
         <td class="center top">${amount(item.special_price)}</td>
         <td class="center top">${amount(item.qty)}</td>

@@ -6,6 +6,8 @@ import { z } from "zod";
 import { calculateQuotation } from "@/lib/calculations";
 import { getCompanySettings, logActivity } from "@/lib/data";
 import { discountLimitMessage, exceedsDiscountLimit } from "@/lib/discount-limit";
+import { determineGstType } from "@/lib/gst";
+import { indiaStateCityList } from "@/lib/india-state-city-list";
 import { isTenDigitPhone, PHONE_VALIDATION_MESSAGE } from "@/lib/phone";
 import { requireUser } from "@/lib/supabase/server";
 import type { GstMode, QuotationItemInput, QuotationStatus } from "@/lib/types";
@@ -35,6 +37,9 @@ const quotationStatusSchema = z.enum([
   "Cancelled"
 ]);
 const phoneSchema = z.string().trim().refine(isTenDigitPhone, PHONE_VALIDATION_MESSAGE);
+const indiaStateSchema = z.enum(
+  indiaStateCityList.map(({ state }) => state) as [string, ...string[]]
+);
 
 function clean(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -80,6 +85,8 @@ function quotationPayloadFromForm(
   status: QuotationStatus
 ) {
   const gstMode = z.enum(["add", "included", "none"]).parse(formData.get("gst_mode"));
+  const placeOfSupply = indiaStateSchema.parse(formData.get("place_of_supply"));
+  const gstType = determineGstType(placeOfSupply, gstMode);
 
   return {
     quote_date: String(formData.get("quote_date") || new Date().toISOString().slice(0, 10)),
@@ -88,10 +95,15 @@ function quotationPayloadFromForm(
     discount_amount: calculated.totals.discount_amount,
     total_special_price: calculated.totals.total_special_price,
     gst_amount: calculated.totals.gst_amount,
+    cgst_amount: calculated.totals.cgst_amount,
+    sgst_amount: calculated.totals.sgst_amount,
+    igst_amount: calculated.totals.igst_amount,
     net_total: calculated.totals.net_total,
     round_off: calculated.totals.round_off,
     grand_total: calculated.totals.grand_total,
     gst_mode: gstMode,
+    gst_type: gstType,
+    place_of_supply: placeOfSupply,
     terms: String(formData.get("terms") || settings.default_terms),
     payment_terms: String(formData.get("payment_terms") || settings.default_payment_terms),
     transportation_note: String(
@@ -121,6 +133,8 @@ export async function saveQuotationAction(formData: FormData) {
   const quotationId = clean(formData.get("quotation_id"));
   const status = quotationStatusSchema.parse(formData.get("status") || "Draft");
   const gstMode = z.enum(["add", "included", "none"]).parse(formData.get("gst_mode"));
+  const placeOfSupply = indiaStateSchema.parse(formData.get("place_of_supply"));
+  const gstType = determineGstType(placeOfSupply, gstMode);
   const rawItems = JSON.parse(String(formData.get("items") || "[]"));
   const items = z.array(itemSchema).min(1).parse(rawItems) as QuotationItemInput[];
 
@@ -141,7 +155,8 @@ export async function saveQuotationAction(formData: FormData) {
   const calculated = calculateQuotation(
     items,
     gstMode as GstMode,
-    settings.store_code.trim().toUpperCase() !== "FMV"
+    settings.store_code.trim().toUpperCase() !== "FMV",
+    gstType
   );
   const { customerId, customerPayload } = customerInputFromForm(formData);
   const basePayload = quotationPayloadFromForm(
@@ -169,7 +184,11 @@ export async function saveQuotationAction(formData: FormData) {
     gst_percent: item.gst_percent,
     list_total: item.list_total,
     special_total: item.special_total,
+    taxable_value: item.taxable_value,
     gst_amount: item.gst_amount,
+    cgst_amount: item.cgst_amount,
+    sgst_amount: item.sgst_amount,
+    igst_amount: item.igst_amount,
     line_total: item.line_total
   }));
 
@@ -188,7 +207,7 @@ export async function saveQuotationAction(formData: FormData) {
   }
 
   const { data: savedId, error: saveError } = await supabase.rpc(
-    "save_quotation_transaction",
+    "save_quotation_with_gst_transaction",
     {
       p_store_id: user.storeId,
       p_quotation_id: quotationId || null,
@@ -227,7 +246,7 @@ export async function createRevisionAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const id = z.string().uuid().parse(formData.get("id"));
   const { data, error } = await supabase.rpc(
-    "create_quotation_revision_transaction",
+    "create_quotation_revision_with_gst_transaction",
     {
       p_store_id: user.storeId,
       p_source_quotation_id: id,

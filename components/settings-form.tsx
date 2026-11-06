@@ -1,4 +1,5 @@
 import { GST_MODES } from "@/lib/constants";
+import { SUPPLIER_STATE } from "@/lib/gst";
 import { saveCompanySettingsAction } from "@/app/actions/settings";
 import { PhoneInput } from "@/components/phone-input";
 import { RequiredMark } from "@/components/required-mark";
@@ -93,6 +94,10 @@ export function SettingsForm({
               name="company_branch"
               defaultValue={settings.company_branch || "VELLORE"}
             />
+          </label>
+          <label>
+            <span className="field-label">Supplier State</span>
+            <input className="field-input bg-slate-100" value={SUPPLIER_STATE} readOnly />
           </label>
           <label>
             <span className="field-label">Bank Firm Name</span>
