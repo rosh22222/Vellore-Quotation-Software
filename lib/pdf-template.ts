@@ -129,6 +129,10 @@ function productIdAndName(item: QuotationItem) {
   return `${productId} - ${productName}`;
 }
 
+function productLineTotal(item: QuotationItem) {
+  return Number(item.special_price || 0) * Number(item.qty || 0);
+}
+
 function productDescription(item: QuotationItem) {
   const heading = productIdAndName(item);
   const detail = [
@@ -245,7 +249,7 @@ function fitnessMartProductRows(
         <td class="fmv-money-cell">${amount(item.unit_price)}</td>
         <td class="fmv-money-cell"><strong>${amount(item.special_price)}</strong></td>
         <td class="fmv-qty-cell">${amount(item.qty)}</td>
-        <td class="fmv-money-cell">${amount(item.line_total)}</td>
+        <td class="fmv-money-cell">${amount(productLineTotal(item))}</td>
       </tr>
     `
           : `
@@ -264,7 +268,7 @@ function fitnessMartProductRows(
         <td class="fmv-money-cell">${amount(item.unit_price)}</td>
         <td class="fmv-money-cell"><strong>${amount(item.special_price)}</strong></td>
         <td class="fmv-qty-cell">${amount(item.qty)}</td>
-        <td class="fmv-money-cell">${amount(item.line_total)}</td>
+        <td class="fmv-money-cell">${amount(productLineTotal(item))}</td>
       </tr>
     `
     )
@@ -379,7 +383,7 @@ function productRows(
         <td class="center top">${amount(item.unit_price)}</td>
         <td class="center top">${amount(item.special_price)}</td>
         <td class="center top">${amount(item.qty)}</td>
-        <td class="center top">${amount(item.line_total)}</td>
+        <td class="center top">${amount(productLineTotal(item))}</td>
       </tr>
     `
         : `
@@ -395,7 +399,7 @@ function productRows(
         <td class="center top">${amount(item.unit_price)}</td>
         <td class="center top">${amount(item.special_price)}</td>
         <td class="center top">${amount(item.qty)}</td>
-        <td class="center top">${amount(item.line_total)}</td>
+        <td class="center top">${amount(productLineTotal(item))}</td>
       </tr>
     `
     )

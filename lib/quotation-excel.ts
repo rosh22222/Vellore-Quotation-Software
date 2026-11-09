@@ -123,6 +123,10 @@ function productIdAndName(item: QuotationItem) {
   return `${productId} - ${productName}`;
 }
 
+function productLineTotal(item: QuotationItem) {
+  return amount(item.special_price) * amount(item.qty);
+}
+
 function productDescription(item: QuotationItem) {
   return [
     text(item.description),
@@ -464,7 +468,7 @@ function addProductRows(
     itemRow.getCell(4).value = amount(item.unit_price);
     itemRow.getCell(5).value = amount(item.special_price);
     itemRow.getCell(6).value = amount(item.qty);
-    itemRow.getCell(7).value = amount(item.line_total);
+    itemRow.getCell(7).value = productLineTotal(item);
 
     styleRange(worksheet, row, 1, row, 7, {
       alignment: { vertical: "top", wrapText: true },
