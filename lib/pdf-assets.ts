@@ -16,6 +16,34 @@ export type PdfChromeImages = {
   mailIcon?: string;
 };
 
+function safePreviewAssetUrl(value: string | null | undefined) {
+  const normalized = String(value || "").trim();
+  if (/^\/pdf\/[a-z0-9][a-z0-9._-]*$/i.test(normalized)) return normalized;
+
+  try {
+    const url = new URL(normalized);
+    return url.protocol === "https:" && !url.username && !url.password ? normalized : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function getPdfPreviewChromeImages(
+  settings: Pick<CompanySettings, "pdf_header_image_url" | "store_code">
+): PdfChromeImages {
+  const fallbackHeader =
+    settings.store_code.trim().toUpperCase() === "FMV"
+      ? "/pdf/FMV-header-banner.png"
+      : "/pdf/VFE-header-banner.png";
+
+  return {
+    top: safePreviewAssetUrl(settings.pdf_header_image_url) || fallbackHeader,
+    phoneIconBig: "/pdf/phone-icon-big.png",
+    phoneIcon: "/pdf/phone-icon.png",
+    mailIcon: "/pdf/mail-icon.png"
+  };
+}
+
 const imageCandidates: Record<PdfImageName, PdfImageCandidate[]> = {
   top: [
     { file: "header-banner.png", mime: "image/png" },

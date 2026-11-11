@@ -72,7 +72,7 @@ import { QuotationActions } from "@/components/quotation-actions";
 import { notFound } from "next/navigation";
 import { getCompanySettings, getQuotationWithItems } from "@/lib/data";
 import { formatCustomerName } from "@/lib/format";
-import { getPdfChromeImages } from "@/lib/pdf-assets";
+import { getPdfPreviewChromeImages } from "@/lib/pdf-assets";
 import { renderQuotationHtml } from "@/lib/pdf-template";
 import { isSafeProductImageUrl } from "@/lib/product-image-url";
 import { requireUser } from "@/lib/supabase/server";
@@ -98,7 +98,7 @@ export default async function QuotationPreviewPage({
 
   const settings = quotation.company_settings_snapshot as CompanySettings;
   const customer = quotation.customer_snapshot as Partial<Customer>;
-  const chromeImages = await getPdfChromeImages(liveSettings);
+  const chromeImages = getPdfPreviewChromeImages(liveSettings);
 
   const previewItems = items.map((item) => ({
     ...item,

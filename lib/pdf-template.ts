@@ -16,7 +16,7 @@ import {
 import type { CompanySettings, Customer, Quotation, QuotationItem } from "@/lib/types";
 import { formatCustomerName, formatDate, normalizeRoundedDisplayNumber } from "@/lib/format";
 import type { PdfChromeImages } from "@/lib/pdf-assets";
-import { isSafeProductImageUrl } from "@/lib/product-image-url";
+import { isPreparedPdfProductImage, isSafeProductImageUrl } from "@/lib/product-image-url";
 
 type PdfTemplateInput = {
   quotation: Quotation;
@@ -109,7 +109,9 @@ function isPreviewImagePath(value: string) {
 function productImage(item: QuotationItem, settings: CompanySettings) {
   if (
     !item.image_url ||
-    (!isSafeProductImageUrl(item.image_url) && !isPreviewImagePath(item.image_url))
+    (!isSafeProductImageUrl(item.image_url) &&
+      !isPreviewImagePath(item.image_url) &&
+      !isPreparedPdfProductImage(item.image_url))
   ) {
     return `<div class="product-fallback">${escapeHtml(settings.quotation_prefix || "VF")}</div>`;
   }

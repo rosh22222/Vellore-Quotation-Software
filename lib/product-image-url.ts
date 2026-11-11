@@ -32,3 +32,10 @@ export function isSafeProductImageUrl(value: string) {
     return false;
   }
 }
+
+export function isPreparedPdfProductImage(value: string) {
+  if (!value.startsWith("data:image/jpeg;base64,")) return false;
+  if (value.length > 400 * 1024) return false;
+
+  return /^[a-z0-9+/=]+$/i.test(value.slice("data:image/jpeg;base64,".length));
+}

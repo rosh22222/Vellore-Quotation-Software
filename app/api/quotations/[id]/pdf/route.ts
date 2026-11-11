@@ -6,12 +6,14 @@ import puppeteer from "puppeteer-core";
 import { getCompanySettings, getQuotationWithItems, logActivity } from "@/lib/data";
 import { formatCustomerName, quotationDownloadBaseName } from "@/lib/format";
 import { getPdfChromeImages } from "@/lib/pdf-assets";
+import { prepareQuotationItemsForPdf } from "@/lib/pdf-product-images";
 import { renderQuotationHtml } from "@/lib/pdf-template";
 import { requireUser } from "@/lib/supabase/server";
 import type { CompanySettings, Customer } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+const MAX_STORED_PDF_BYTES = 9 * 1024 * 1024;
 
 async function getStoredPdfDownload(supabase: any, id: string, storeId: string) {
   const { data: quotation, error } = await supabase
@@ -116,15 +118,24 @@ async function createQuotationPdf(supabase: any, id: string, storeId: string) {
     getCompanySettings(supabase, storeId)
   ]);
   const settings = quotation.company_settings_snapshot as CompanySettings;
-  const chromeImages = await getPdfChromeImages(liveSettings);
+  const [chromeImages, pdfItems] = await Promise.all([
+    getPdfChromeImages(liveSettings),
+    prepareQuotationItemsForPdf(items)
+  ]);
   const customer = quotation.customer_snapshot as Partial<Customer>;
   const html = renderQuotationHtml({
     quotation,
-    items,
+    items: pdfItems,
     settings,
     chromeImages
   });
   const pdf = await htmlToPdf(html);
+
+  if (pdf.length > MAX_STORED_PDF_BYTES) {
+    throw new Error(
+      "The generated PDF is still too large. Reduce the number or size of product images and try again."
+    );
+  }
 
   const filename = `${quotationDownloadBaseName(
     formatCustomerName(customer),
