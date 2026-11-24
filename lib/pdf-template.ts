@@ -1,5 +1,6 @@
 import {
   Building2,
+  CalendarDays,
   ClipboardList,
   FileText,
   HandCoins,
@@ -11,6 +12,7 @@ import {
   Phone,
   ShieldCheck,
   Truck,
+  UserRound,
   type LucideIcon
 } from "lucide-react";
 import type { CompanySettings, Customer, Quotation, QuotationItem } from "@/lib/types";
@@ -151,17 +153,21 @@ function productDescription(item: QuotationItem) {
 }
 
 function fitnessMartProductDescription(item: QuotationItem) {
-  const detail = [
-    lines(item.description),
-    labelLine("Dimensions", item.dimensions),
-    labelLine("Machine Weight", item.machine_weight),
-    labelLine("Stack Weight", item.stack_weight),
-    lines(item.specifications)
+  const detailLines = [
+    ...String(item.description || "").split(/\r?\n/),
+    item.dimensions ? `Dimensions - ${item.dimensions}` : "",
+    item.machine_weight ? `Machine Weight - ${item.machine_weight}` : "",
+    item.stack_weight ? `Stack Weight - ${item.stack_weight}` : "",
+    ...String(item.specifications || "").split(/\r?\n/)
   ]
-    .filter(Boolean)
-    .join("");
+    .map((value) => value.trim().replace(/^[\u2022\-*]+\s*/, ""))
+    .filter(Boolean);
 
-  return detail || "-";
+  if (!detailLines.length) return "-";
+
+  return `<ul class="fmv-spec-list">${detailLines
+    .map((detail) => `<li>${escapeHtml(detail)}</li>`)
+    .join("")}</ul>`;
 }
 
 function fitnessMartTableColumns(documentVariant: PdfDocumentVariant) {
@@ -200,7 +206,7 @@ function fitnessMartTableHead(documentVariant: PdfDocumentVariant) {
           <th>S.No</th>
           <th>Product Name</th>
           <th>List Price<br>${currencyHeaderMark()}</th>
-          <th>Offer Price<br>${currencyHeaderMark()}</th>
+          <th class="fmv-offer-head">Offer Price<br>${currencyHeaderMark()}</th>
           <th>Qty</th>
           <th>Final Price<br>${currencyHeaderMark()}</th>
         </tr>
@@ -216,7 +222,7 @@ function fitnessMartTableHead(documentVariant: PdfDocumentVariant) {
         <th>Description</th>
         <th>Product</th>
         <th>List Price<br>${currencyHeaderMark()}</th>
-        <th>Offer Price<br>${currencyHeaderMark()}</th>
+        <th class="fmv-offer-head">Offer Price<br>${currencyHeaderMark()}</th>
         <th>Qty</th>
         <th>Final Price<br>${currencyHeaderMark()}</th>
       </tr>
@@ -249,7 +255,7 @@ function fitnessMartProductRows(
           <strong>${escapeHtml(productIdAndName(item))}</strong>
         </td>
         <td class="fmv-money-cell">${amount(item.unit_price)}</td>
-        <td class="fmv-money-cell"><strong>${amount(item.special_price)}</strong></td>
+        <td class="fmv-money-cell fmv-offer-cell"><strong>${amount(item.special_price)}</strong></td>
         <td class="fmv-qty-cell">${amount(item.qty)}</td>
         <td class="fmv-money-cell">${amount(productLineTotal(item))}</td>
       </tr>
@@ -268,7 +274,7 @@ function fitnessMartProductRows(
           </div>
         </td>
         <td class="fmv-money-cell">${amount(item.unit_price)}</td>
-        <td class="fmv-money-cell"><strong>${amount(item.special_price)}</strong></td>
+        <td class="fmv-money-cell fmv-offer-cell"><strong>${amount(item.special_price)}</strong></td>
         <td class="fmv-qty-cell">${amount(item.qty)}</td>
         <td class="fmv-money-cell">${amount(productLineTotal(item))}</td>
       </tr>
@@ -525,11 +531,11 @@ function totalsTable(quotation: Quotation, hideRoundOff = false) {
     <table class="${tableClass}">
       <tr><td>Total List Price</td><td>${amount(quotation.total_list_price)}</td></tr>
       <tr><td>Discount</td><td>${amount(quotation.discount_amount)}</td></tr>
-      <tr><td>${hideRoundOff ? "Total Offer Price" : "Total Special Price"}</td><td>${amount(quotation.total_special_price)}</td></tr>
+      <tr class="${hideRoundOff ? "fmv-offer-total" : ""}"><td>${hideRoundOff ? "Total Offer Price" : "Total Special Price"}</td><td>${amount(quotation.total_special_price)}</td></tr>
       <tr><td>GST</td><td>${amount(quotation.gst_amount)}</td></tr>
       ${hideRoundOff ? "" : `<tr><td>Net Total</td><td>${amount(quotation.net_total)}</td></tr>`}
       ${hideRoundOff ? "" : `<tr><td>Round Off</td><td>${amount(quotation.round_off)}</td></tr>`}
-      <tr><td>Grand Total</td><td>${amount(grandTotal)}</td></tr>
+      <tr class="${hideRoundOff ? "fmv-grand-total" : ""}"><td>Grand Total</td><td>${amount(grandTotal)}</td></tr>
     </table>
   `;
 }
@@ -708,29 +714,38 @@ function firstPage({
       <section class="page page-1 product-page fmv-product-page">
         ${headerImage(chromeImages)}
 
-        <h1 class="fmv-estimation-title">${isProforma ? "Proforma Invoice" : "Product Proposal"}</h1>
+        ${isProforma ? '<h1 class="fmv-estimation-title">Proforma Invoice</h1>' : ""}
 
         <div class="fmv-customer-block">
           <div class="fmv-customer-left">
-            <div class="fmv-customer-label">Prepared For</div>
-            <strong class="fmv-customer-name">${escapeHtml(fitnessMartCustomerName(customer))}</strong>
-            <div class="fmv-customer-detail">
-              <span class="fmv-customer-icon">${fmvIcon(MapPin)}</span>
-              <span>${escapeHtml(customerFullAddress(customer) || ".")}</span>
-            </div>
-            <div class="fmv-customer-detail">
-              <span class="fmv-customer-icon">${fmvIcon(Phone)}</span>
-              <span>${escapeHtml(customer.phone || "")}</span>
+            <div class="fmv-prepared-mark">${fmvIcon(UserRound)}</div>
+            <div class="fmv-customer-copy">
+              <div class="fmv-customer-label">Prepared For</div>
+              <strong class="fmv-customer-name">${escapeHtml(fitnessMartCustomerName(customer))}</strong>
+              <div class="fmv-customer-detail">
+                <span class="fmv-customer-icon">${fmvIcon(MapPin)}</span>
+                <span>${escapeHtml(customerFullAddress(customer) || ".")}</span>
+              </div>
+              <div class="fmv-customer-detail">
+                <span class="fmv-customer-icon">${fmvIcon(Phone)}</span>
+                <span>${escapeHtml(customer.phone || "")}</span>
+              </div>
             </div>
           </div>
           <div class="fmv-customer-right">
             <div class="fmv-reference-item">
-              <span>${isProforma ? "Proforma Invoice No." : "Proposal No."}</span>
-              <strong>${escapeHtml(quotation.quote_number)}</strong>
+              <span class="fmv-reference-icon">${fmvIcon(FileText)}</span>
+              <div>
+                <span>${isProforma ? "Proforma Invoice No." : "Proposal No."}</span>
+                <strong>${escapeHtml(quotation.quote_number)}</strong>
+              </div>
             </div>
             <div class="fmv-reference-item">
-              <span>Date</span>
-              <strong>${formatDate(quotation.quote_date)}</strong>
+              <span class="fmv-reference-icon">${fmvIcon(CalendarDays)}</span>
+              <div>
+                <span>Date</span>
+                <strong>${formatDate(quotation.quote_date)}</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -797,6 +812,64 @@ function productOnlyPage({
           : productTable({ items, startIndex, settings, className: "page2-products", documentVariant })
       }
     </section>
+  `;
+}
+
+function fitnessMartPaginationScript(enabled: boolean) {
+  if (!enabled) return "";
+
+  return `
+    <script>
+      (() => {
+        window.__paginateFitnessMartProducts = () => {
+          if (document.documentElement.dataset.pdfProducts === "ready") return;
+
+          const firstPage = document.querySelector(".fmv-product-page.page-1");
+          const firstTable = firstPage?.querySelector(".fmv-product-table");
+          const firstBody = firstTable?.tBodies?.[0];
+          if (!firstPage || !firstTable || !firstBody) {
+            document.documentElement.dataset.pdfProducts = "ready";
+            return;
+          }
+
+          const rows = Array.from(firstBody.rows);
+          firstBody.replaceChildren();
+          let currentPage = firstPage;
+          let currentTable = firstTable;
+          let currentBody = firstBody;
+
+          const rowFits = () => {
+            const pageRect = currentPage.getBoundingClientRect();
+            const bottomPadding = parseFloat(getComputedStyle(currentPage).paddingBottom) || 0;
+            return currentTable.getBoundingClientRect().bottom <= pageRect.bottom - bottomPadding + 0.5;
+          };
+
+          const createProductPage = () => {
+            const page = document.createElement("section");
+            page.className = "page continuation-page product-only-page product-page fmv-product-page";
+            const table = firstTable.cloneNode(true);
+            table.classList.add("fmv-page2-products");
+            table.tBodies[0].replaceChildren();
+            page.appendChild(table);
+            currentPage.after(page);
+            currentPage = page;
+            currentTable = table;
+            currentBody = table.tBodies[0];
+          };
+
+          rows.forEach((row) => {
+            currentBody.appendChild(row);
+            if (!rowFits() && (currentBody.rows.length > 1 || currentPage === firstPage)) {
+              currentBody.removeChild(row);
+              createProductPage();
+              currentBody.appendChild(row);
+            }
+          });
+
+          document.documentElement.dataset.pdfProducts = "ready";
+        };
+      })();
+    </script>
   `;
 }
 
@@ -878,6 +951,7 @@ function detailFlow({
     <script>
       (() => {
         const paginate = () => {
+        if (window.__paginateFitnessMartProducts) window.__paginateFitnessMartProducts();
         const blockTemplate = document.getElementById("pdf-flow-blocks");
         const pageTemplate = document.getElementById("pdf-flow-page");
         const productPages = Array.from(document.querySelectorAll(".product-page"));
@@ -942,11 +1016,13 @@ export function renderQuotationHtml({
 }: PdfTemplateInput) {
   const customer = customerFromSnapshot(quotation.customer_snapshot);
   const useFitnessMartLayout = isFitnessMart(settings);
-  const { first, continuation } = splitProductPages(
+  const productPages = splitProductPages(
     items,
     useFitnessMartLayout,
     documentVariant
   );
+  const first = useFitnessMartLayout ? items : productPages.first;
+  const continuation = useFitnessMartLayout ? [] : productPages.continuation;
   let nextIndex = first.length;
 
   const continuationPages = continuation
@@ -1196,6 +1272,29 @@ html, body {
 .fmv-total-table td:first-child { width: 57.5556%; }
 .fmv-total-table td:last-child { width: 42.4444%; }
 
+.fmv-total-table tr:not(.fmv-offer-total):not(.fmv-grand-total) td {
+  background: #f3f3f3;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.fmv-total-table .fmv-offer-total td {
+  background: #d10b16;
+  color: #fff;
+  font-weight: 900;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.fmv-total-table .fmv-grand-total td {
+  background: #202326;
+  color: #fff;
+  font-size: 9pt;
+  font-weight: 900;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .terms-entry {
   margin-left: 9mm;
   width: 150mm;
@@ -1278,12 +1377,18 @@ html, body {
 .sep { margin: 0 1.5mm; }
 
 .fmv-product-page {
-  padding: 6mm 6.5mm 10mm 6.5mm;
+  padding: 0 6.5mm 10mm 6.5mm;
   font-family: Arial, "Liberation Sans", "DejaVu Sans", sans-serif;
 }
 
 .fmv-product-page.continuation-page {
   padding-top: 8mm;
+}
+
+.fmv-product-page.page-1 .top-banner {
+  width: calc(100% + 13mm);
+  max-width: none;
+  margin: 0 -6.5mm 2.5mm -6.5mm;
 }
 
 .fmv-estimation-title {
@@ -1297,28 +1402,56 @@ html, body {
 
 .fmv-customer-block {
   display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(48mm, 1fr);
-  min-height: 28mm;
-  margin-bottom: 2.5mm;
-  overflow: hidden;
-  border: 1.2px solid #1b1b1b;
-  border-left: 2.2mm solid #e30613;
-  background: #fff;
+  grid-template-columns: minmax(0, 1.75fr) minmax(52mm, 1fr);
+  gap: 5mm;
+  min-height: 26mm;
+  margin-bottom: 6mm;
+  background: transparent;
   font-size: 7.7pt;
   line-height: 1.2;
 }
 
 .fmv-customer-left {
+  display: grid;
+  grid-template-columns: 11mm minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 2mm 0 0 2mm;
+  border-right: .55mm solid #d10b16;
+  background: #f3f3f3;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.fmv-prepared-mark {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4.2mm;
+  padding-right: 1.8mm;
+  color: #fff;
+  background: linear-gradient(180deg, #ed1723 0%, #bd000b 100%);
+  clip-path: polygon(0 0, 100% 0, 76% 100%, 0 100%);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.fmv-prepared-mark svg {
+  width: 5mm;
+  height: 5mm;
+  stroke: currentColor;
+}
+
+.fmv-customer-copy {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 2.2mm 4.5mm 2.2mm 3.5mm;
+  padding: 2.2mm 4.5mm 2.2mm 4.7mm;
 }
 
 .fmv-customer-label {
   margin-bottom: .8mm;
-  color: #c9000d;
-  font-size: 6.2pt;
+  color: #d10b16;
+  font-size: 6.4pt;
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
@@ -1360,36 +1493,56 @@ html, body {
 .fmv-customer-right {
   display: grid;
   grid-template-rows: 1fr 1fr;
-  border-left: 1.5mm solid #e30613;
-  background: #fff;
+  overflow: hidden;
+  border-radius: 3mm;
+  background: #f3f3f3;
   color: #111;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
 .fmv-reference-item {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 1.5mm 5mm;
+  display: grid;
+  grid-template-columns: 15mm minmax(0, 1fr);
+  align-items: center;
+  padding: 1.5mm 4mm 1.5mm 2.7mm;
 }
 
 .fmv-reference-item + .fmv-reference-item {
-  border-top: 1px solid #c9c9c9;
+  border-top: 1px solid #c6c6c6;
 }
 
-.fmv-reference-item span {
+.fmv-reference-icon {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: #e30613;
+}
+
+.fmv-reference-icon svg {
+  width: 5.8mm;
+  height: 5.8mm;
+  stroke: currentColor;
+}
+
+.fmv-reference-item > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.fmv-reference-item > div > span {
   margin-bottom: .6mm;
-  color: #c9000d;
-  font-size: 6.1pt;
+  color: #d10b16;
+  font-size: 6.4pt;
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
 }
 
-.fmv-reference-item strong {
+.fmv-reference-item > div > strong {
   color: #111;
-  font-size: 8.7pt;
+  font-size: 9.5pt;
   line-height: 1.05;
 }
 
@@ -1453,11 +1606,48 @@ html, body {
   padding-right: 2mm !important;
 }
 
+.fmv-spec-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fmv-spec-list li {
+  position: relative;
+  margin: 0 0 .45mm 0;
+  padding-left: 3mm;
+  line-height: 1.2;
+}
+
+.fmv-spec-list li::before {
+  content: "";
+  position: absolute;
+  top: .9mm;
+  left: .4mm;
+  width: 1.1mm;
+  height: 1.1mm;
+  border-radius: 50%;
+  background: #d10b16;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .fmv-product-cell,
 .fmv-money-cell,
 .fmv-serial-cell,
 .fmv-qty-cell {
   text-align: center;
+}
+
+.fmv-product-table th.fmv-offer-head {
+  background: #d10b16;
+  color: #fff;
+}
+
+.fmv-offer-cell strong {
+  color: #c9000d;
+  font-size: 8.6pt;
+  font-weight: 900;
 }
 
 .fmv-product-card {
@@ -1522,7 +1712,7 @@ html, body {
   align-items: center;
   gap: 2.2mm;
   color: #fff !important;
-  background: #111 !important;
+  background: linear-gradient(100deg, #bf000b 0%, #e31a25 100%) !important;
   font-family: "Quotation Numbers", Georgia, "Times New Roman", Times, serif;
   font-weight: 900;
   -webkit-print-color-adjust: exact;
@@ -1534,8 +1724,8 @@ html, body {
   top: -4.7mm;
   left: 3.5mm;
   min-height: 9.2mm;
-  padding: 1mm 4.5mm 1mm 2.5mm;
-  border-radius: 1.5mm;
+  padding: 1mm 7mm 1mm 3.5mm;
+  clip-path: polygon(4% 0, 100% 0, 94% 100%, 0 100%);
   font-size: 11.2pt;
   line-height: 1;
 }
@@ -1720,8 +1910,8 @@ html, body {
   min-width: 43mm;
   min-height: 8mm;
   margin-bottom: 2mm;
-  padding: .8mm 3mm .8mm 2.3mm;
-  border-radius: 1.5mm;
+  padding: .8mm 6mm .8mm 3.5mm;
+  clip-path: polygon(5% 0, 100% 0, 94% 100%, 0 100%);
   font-size: 9.8pt;
   line-height: 1;
 }
@@ -1776,6 +1966,10 @@ html, body {
   line-height: 1.12;
 }
 
+.fmv-details-page {
+  padding: 8mm 4mm 8mm 4mm;
+}
+
 @media print {
   html, body { background: #fff; }
   .page {
@@ -1794,6 +1988,7 @@ html, body {
 <body class="${documentVariant === "proforma" ? "proforma-invoice" : "quotation-document"}">
   ${firstPage({ quotation, items: first, customer, settings, chromeImages, documentVariant })}
   ${continuationPages}
+  ${fitnessMartPaginationScript(useFitnessMartLayout)}
   ${detailFlow({ quotation, settings, chromeImages })}
 </body>
 </html>`;
