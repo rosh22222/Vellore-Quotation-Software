@@ -12,3 +12,14 @@ supabase/.temp
 playwright-report
 test-results
 tsconfig.tsbuildinfo
+
+# Local generated exports and verification artifacts
+/output/
+/outputs/
+/tmp/
+
+# Rejected or unused PDF header image variants
+/public/pdf/FMV-header-banner-again rejected.png
+/public/pdf/FMV-header-banner-changed again.png
+/public/pdf/FMV-header-banner-odded.png
+/public/pdf/VFE-header-banner-odded.png
